@@ -15,11 +15,11 @@ type Match struct {
 }
 
 // OrderKind determine whether bid or ask type of order
-type OrderKind int
+type OrderKind string
 
 const (
-	Bid OrderKind = 0
-	Ask OrderKind = 1
+	Bid OrderKind = "BID"
+	Ask OrderKind = "ASK"
 )
 
 // Order
