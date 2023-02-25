@@ -43,16 +43,15 @@ func TestPlaceLimitOrder(t *testing.T) {
 
 	assert(t, len(ob.asks), 2)
 
-	// 	buyOrder1 := NewOrder(Bid, 10)
-	// 	buyOrder2 := NewOrder(Bid, 12)
-	// 	fmt.Println(buyOrder1)
-	// 	ob.PlaceOrder(price, buyOrder1)
-	// 	ob.PlaceOrder(price, buyOrder2)
+	buyOrder1 := NewOrder(Bid, 10)
+	buyOrder2 := NewOrder(Bid, 12)
+	ob.PlaceLimitOrder(price, buyOrder1)
+	ob.PlaceLimitOrder(price, buyOrder2)
 
-	// 	fmt.Printf("TotalVolume: %+v \n", ob.Bids[1].TotalVolume)
-	// 	fmt.Printf("DB: %+v \n", ob)
+	assert(t, len(ob.bids), 2)
 
-	// require.Equal(t, 22.0, ob.Bids[0].TotalVolume+ob.Bids[1].TotalVolume)
+	assert(t, ob.Orders[sellOrder1.ID], sellOrder1)
+	assert(t, ob.Orders[buyOrder1.ID], buyOrder1)
 }
 
 func TestPlaceMarketOrder(t *testing.T) {
@@ -138,4 +137,7 @@ func TestCancelOrder(t *testing.T) {
 	ob.CancelOrder(buyOrder)
 
 	assert(t, ob.BidTotalVolume(), 0.0)
+
+	_, exists := ob.Orders[buyOrder.ID]
+	assert(t, exists, false)
 }

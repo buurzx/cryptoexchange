@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+	"strconv"
 
 	"github.com/buurzx/cryptoexchange/orderbook"
 	"github.com/labstack/echo/v4"
@@ -13,7 +15,10 @@ func main() {
 	exchange := NewExchange()
 
 	server.POST("/orders", exchange.handlePlaceOrder)
-	server.GET("/test", exchange.handleHeartBeat)
+	server.GET("/orderbook/:market", exchange.handleGetOrderbook)
+	server.DELETE("/orders/:id", exchange.handleCancelOrder)
+
+	server.GET("/heartbeat", exchange.handleHeartBeat)
 
 	server.Start(":3000")
 }
@@ -31,11 +36,11 @@ const (
 	MarketOrder OrderType = "MARKET"
 )
 
-type Direction string
+type Kind string
 
 const (
-	Ask Direction = "ASK"
-	Bid Direction = "BID"
+	Ask Kind = "ASK"
+	Bid Kind = "BID"
 )
 
 type Exchange struct {
@@ -52,34 +57,117 @@ func NewExchange() *Exchange {
 }
 
 type PlaceOrderRequest struct {
-	Type      OrderType
-	Direction Direction
-	Size      float64 `json:",string"`
-	Price     float64 `json:",string"`
-	Market    Market
+	Type   OrderType
+	Kind   Kind
+	Size   float64 `json:",string"`
+	Price  float64 `json:",string"`
+	Market Market
+}
+
+type Order struct {
+	ID        int64
+	Size      float64
+	Timestamp int64
+	Price     float64
+	Kind      string
+}
+
+type OrderbookData struct {
+	TotalBidVolume float64
+	TotalAskVolume float64
+	Asks           []*Order
+	Bids           []*Order
 }
 
 func (e *Exchange) handlePlaceOrder(c echo.Context) error {
 	var placeOrderData PlaceOrderRequest
 
 	if err := json.NewDecoder(c.Request().Body).Decode(&placeOrderData); err != nil {
-		return c.JSON(500, map[string]any{"error": err.Error()})
+		return c.JSON(500, map[string]any{"error": []string{err.Error()}})
 	}
 
 	market := Market(placeOrderData.Market)
 	ob := e.orderbooks[market]
 
-	order := orderbook.NewOrder(orderbook.OrderKind(placeOrderData.Direction), placeOrderData.Size)
+	order := orderbook.NewOrder(orderbook.OrderKind(placeOrderData.Kind), placeOrderData.Size)
 
 	if placeOrderData.Type == MarketOrder {
-		ob.PlaceMarketOrder(order)
-	} else {
-		ob.PlaceLimitOrder(placeOrderData.Price, order)
+		matches := ob.PlaceMarketOrder(order)
+		return c.JSON(200, map[string]any{"succes": true, "matches": len(matches)})
+	}
+	if placeOrderData.Type == LimitOrder {
+		id := ob.PlaceLimitOrder(placeOrderData.Price, order)
+		return c.JSON(200, map[string]any{"id": id})
 	}
 
-	return c.JSON(200, map[string]any{"succes": true})
+	return nil
 }
 
 func (e *Exchange) handleHeartBeat(c echo.Context) error {
-	return c.JSON(200, map[string]any{"heartbeat": "success"})
+	return c.JSON(http.StatusOK, map[string]any{"heartbeat": "success"})
+}
+
+func (e *Exchange) handleGetOrderbook(c echo.Context) error {
+	market := Market(c.Param("market"))
+
+	ob, ok := e.orderbooks[market]
+	if !ok {
+		return c.JSON(http.StatusNotFound, map[string]any{"errors": []string{"orderbook not found"}})
+	}
+
+	orderbookData := OrderbookData{
+		TotalBidVolume: ob.BidTotalVolume(),
+		TotalAskVolume: ob.AskTotalVolume(),
+		Asks:           []*Order{},
+		Bids:           []*Order{},
+	}
+
+	for _, limit := range ob.Asks() {
+		for _, order := range limit.Orders {
+			o := Order{
+				ID:        order.ID,
+				Price:     limit.Price,
+				Size:      order.Size,
+				Kind:      string(order.Kind),
+				Timestamp: order.Timestampt,
+			}
+
+			orderbookData.Asks = append(orderbookData.Asks, &o)
+		}
+	}
+
+	for _, limit := range ob.Bids() {
+		for _, order := range limit.Orders {
+			o := Order{
+				ID:        order.ID,
+				Price:     limit.Price,
+				Size:      order.Size,
+				Kind:      string(order.Kind),
+				Timestamp: order.Timestampt,
+			}
+
+			orderbookData.Bids = append(orderbookData.Bids, &o)
+		}
+	}
+
+	return c.JSON(http.StatusOK, orderbookData)
+}
+
+func (e *Exchange) handleCancelOrder(c echo.Context) error {
+	idStr := c.Param("id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]any{"errors": []string{err.Error()}})
+	}
+
+	ob := e.orderbooks[MarketETH]
+	order, exists := ob.Orders[int64(id)]
+	if !exists {
+		return c.JSON(http.StatusNotFound, map[string]any{"errors": []string{"Order not found"}})
+	}
+
+	ob.CancelOrder(order)
+
+	return c.JSON(http.StatusOK, map[string]any{"success": true})
 }

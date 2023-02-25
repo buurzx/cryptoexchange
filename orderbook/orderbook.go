@@ -2,6 +2,7 @@ package orderbook
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"time"
 )
@@ -24,6 +25,7 @@ const (
 
 // Order
 type Order struct {
+	ID         int64
 	Size       float64
 	Kind       OrderKind
 	Limit      *Limit
@@ -34,6 +36,7 @@ type Orders []*Order
 
 func NewOrder(orderKind OrderKind, size float64) *Order {
 	return &Order{
+		ID:         int64(rand.Intn(1000000000)),
 		Size:       size,
 		Kind:       orderKind,
 		Timestampt: time.Now().UnixNano(),
@@ -56,6 +59,8 @@ func (o Orders) Less(i, j int) bool { return o[i].Timestampt > o[j].Timestampt }
 type Orderbook struct {
 	asks []*Limit
 	bids []*Limit
+
+	Orders map[int64]*Order
 
 	AskLimits map[float64]*Limit
 	BidLimits map[float64]*Limit
@@ -180,6 +185,7 @@ func NewOrderBook() *Orderbook {
 		bids:      []*Limit{},
 		AskLimits: make(map[float64]*Limit),
 		BidLimits: make(map[float64]*Limit),
+		Orders:    make(map[int64]*Order),
 	}
 }
 
@@ -218,7 +224,7 @@ func (ob *Orderbook) PlaceMarketOrder(o *Order) []Match {
 }
 
 // PlaceLimitOrder adds limit order to order book
-func (ob *Orderbook) PlaceLimitOrder(price float64, o *Order) {
+func (ob *Orderbook) PlaceLimitOrder(price float64, o *Order) int64 {
 	var limit *Limit
 
 	if o.Kind == Bid {
@@ -237,7 +243,10 @@ func (ob *Orderbook) PlaceLimitOrder(price float64, o *Order) {
 		}
 	}
 
+	ob.Orders[o.ID] = o
 	limit.AddOrder(o)
+
+	return o.ID
 }
 
 func (ob *Orderbook) clearLimit(kind OrderKind, l *Limit) {
@@ -265,6 +274,7 @@ func (ob *Orderbook) clearLimit(kind OrderKind, l *Limit) {
 func (ob *Orderbook) CancelOrder(o *Order) {
 	limit := o.Limit
 	limit.DeleteOrder(o)
+	delete(ob.Orders, o.ID)
 }
 
 func (ob *Orderbook) BidTotalVolume() float64 {
