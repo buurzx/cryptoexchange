@@ -79,6 +79,12 @@ type OrderbookData struct {
 	Bids           []*Order
 }
 
+type MatchedOrder struct {
+	Price float64
+	Size  float64
+	ID    int64
+}
+
 func (e *Exchange) handlePlaceOrder(c echo.Context) error {
 	var placeOrderData PlaceOrderRequest
 
@@ -93,7 +99,24 @@ func (e *Exchange) handlePlaceOrder(c echo.Context) error {
 
 	if placeOrderData.Type == MarketOrder {
 		matches := ob.PlaceMarketOrder(order)
-		return c.JSON(200, map[string]any{"succes": true, "matches": len(matches)})
+		kind := order.Kind
+		matchedOrders := []MatchedOrder{}
+
+		for _, match := range matches {
+			var newMatch MatchedOrder
+
+			if kind == orderbook.Ask {
+				newMatch.ID = match.Ask.ID
+			} else {
+				newMatch.ID = match.Bid.ID
+			}
+			newMatch.Size = match.SizeFilled
+			newMatch.Price = match.Price
+
+			matchedOrders = append(matchedOrders, newMatch)
+		}
+
+		return c.JSON(200, map[string]any{"matches": matchedOrders})
 	}
 	if placeOrderData.Type == LimitOrder {
 		id := ob.PlaceLimitOrder(placeOrderData.Price, order)
