@@ -6,7 +6,6 @@ import (
 	"github.com/buurzx/cryptoexchange/src/app"
 	appconfig "github.com/buurzx/cryptoexchange/src/app/configs"
 	"github.com/buurzx/cryptoexchange/src/logger"
-	"github.com/buurzx/cryptoexchange/src/repositories"
 	"github.com/buurzx/cryptoexchange/src/web"
 	"github.com/urfave/cli/v2"
 )
@@ -29,8 +28,7 @@ func BuildCmd() *cli.Command {
 				return fmt.Errorf("failed to initialize application %w", err)
 			}
 
-			app.Register(repositories.NewOrderbooksRepo()).
-				Register(web.New())
+			app.Register(web.New())
 
 			err = app.Run(ctx.Context)
 			if err != nil {

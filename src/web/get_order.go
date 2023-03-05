@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/buurzx/cryptoexchange/src/entities"
@@ -12,6 +13,7 @@ type OrderbookData struct {
 	TotalAskVolume float64
 	Asks           []*entities.Order
 	Bids           []*entities.Order
+	OrderbookID    int64
 }
 
 type getOrder struct {
@@ -25,9 +27,9 @@ func NewGetOrderHandler(oredebookRepo OrderbooksRepoIface) *getOrder {
 func (p *getOrder) Handle(c echo.Context) error {
 	market := entities.Market(c.Param("market"))
 
-	ob := p.orderbookRepo.FindByMarket(string(market))
-	if ob == nil {
-		return c.JSON(http.StatusNotFound, map[string]any{"errors": []string{"orderbook not found"}})
+	ob, err := p.orderbookRepo.FindByMarket(string(market))
+	if err != nil && errors.Is(entities.ErrNotFound, err) {
+		return c.JSON(http.StatusNotFound, map[string]any{"errors": notFoundErrorResponse})
 	}
 
 	orderbookData := OrderbookData{
@@ -35,16 +37,18 @@ func (p *getOrder) Handle(c echo.Context) error {
 		TotalAskVolume: ob.AskTotalVolume(),
 		Asks:           []*entities.Order{},
 		Bids:           []*entities.Order{},
+		OrderbookID:    ob.ID,
 	}
 
 	for _, limit := range ob.Asks() {
 		for _, order := range limit.Orders {
 			o := entities.Order{
-				ID:         order.ID,
-				Price:      limit.Price,
-				Size:       order.Size,
-				Kind:       order.Kind,
-				Timestampt: order.Timestampt,
+				ID:          order.ID,
+				Price:       limit.Price,
+				Size:        order.Size,
+				Kind:        order.Kind,
+				Timestampt:  order.Timestampt,
+				OrderbookID: order.ID,
 			}
 
 			orderbookData.Asks = append(orderbookData.Asks, &o)
@@ -54,11 +58,12 @@ func (p *getOrder) Handle(c echo.Context) error {
 	for _, limit := range ob.Bids() {
 		for _, order := range limit.Orders {
 			o := entities.Order{
-				ID:         order.ID,
-				Price:      limit.Price,
-				Size:       order.Size,
-				Kind:       order.Kind,
-				Timestampt: order.Timestampt,
+				ID:          order.ID,
+				Price:       limit.Price,
+				Size:        order.Size,
+				Kind:        order.Kind,
+				Timestampt:  order.Timestampt,
+				OrderbookID: order.ID,
 			}
 
 			orderbookData.Bids = append(orderbookData.Bids, &o)

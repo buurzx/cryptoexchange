@@ -2,11 +2,13 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/buurzx/cryptoexchange/src/app"
 	configs "github.com/buurzx/cryptoexchange/src/app/configs"
 	"github.com/buurzx/cryptoexchange/src/entities"
+	"github.com/buurzx/cryptoexchange/src/repositories"
 	"github.com/labstack/echo/v4"
 )
 
@@ -23,8 +25,15 @@ type Logger interface {
 }
 
 type OrderbooksRepoIface interface {
-	FindByMarket(string) *entities.Orderbook
+	FindByMarket(string) (*entities.Orderbook, error)
+	FindByID(int64) (*entities.Orderbook, error)
 }
+
+type OrderRepoIface interface {
+	FindByID(int64) (*entities.Order, error)
+}
+
+var notFoundErrorResponse = []string{"record not found"}
 
 const pluginName = "web"
 
@@ -45,18 +54,24 @@ func (s *API) Setup(a *app.Application) error {
 	s.logger = a.Logger
 
 	// repos
-	orderbookRepo := a.Plugins["orderbookRepo"].(OrderbooksRepoIface)
+	// TODO: remove repo dependency
+	repos := repositories.NewRepos()
+	err := repos.Setup(a)
+	if err != nil {
+		return fmt.Errorf("failed setup repo %w", err)
+	}
 
 	// handlers
 	healthcheckHandler := NewHealthcheck()
-	placeOrderHandler := NewPlaceOrderHandler(orderbookRepo)
-	getOrderHandler := NewGetOrderHandler(orderbookRepo)
+	placeOrderHandler := NewPlaceOrderHandler(repos.Orderbook)
+	getOrderHandler := NewGetOrderHandler(repos.Orderbook)
+	cancelOrderHandler := NewCancelOrderHandler(repos.Orderbook, repos.Order, s.logger)
 
 	// routes
 	s.echo.GET("/health", healthcheckHandler.Handle)
 	s.echo.POST("/orders", placeOrderHandler.Handle)
 	s.echo.GET("/orderbook/:market", getOrderHandler.Handle)
-	// s.echo.DELETE("/orders/:id", handleCancelOrder)
+	s.echo.DELETE("/orderbooks/:orderbook_id/orders/:id", cancelOrderHandler.Handle)
 
 	return nil
 }

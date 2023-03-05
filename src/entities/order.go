@@ -1,9 +1,12 @@
 package entities
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 )
+
+var ErrNotFound = errors.New("no records found")
 
 type OrderType string
 
@@ -23,20 +26,22 @@ const (
 type Orders []*Order
 
 type Order struct {
-	ID         int64
-	Size       float64
-	Kind       OrderKind
-	Limit      *Limit
-	Price      float64
-	Timestampt int64
+	ID          int64
+	OrderbookID int64
+	Size        float64
+	Kind        OrderKind
+	Limit       *Limit
+	Price       float64
+	Timestampt  int64
 }
 
-func NewOrder(orderKind OrderKind, size float64) *Order {
+func NewOrder(orderKind OrderKind, size float64, orderbookID int64) *Order {
 	return &Order{
-		ID:         int64(rand.Intn(1000000000)),
-		Size:       size,
-		Kind:       orderKind,
-		Timestampt: time.Now().UnixNano(),
+		ID:          int64(rand.Intn(1000000000)),
+		Size:        size,
+		Kind:        orderKind,
+		Timestampt:  time.Now().UnixNano(),
+		OrderbookID: orderbookID,
 	}
 }
 

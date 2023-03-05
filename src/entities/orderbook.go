@@ -2,6 +2,7 @@ package entities
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 )
 
@@ -22,6 +23,8 @@ type Match struct {
 
 // Orderbook holds a bunch of asks and bids
 type Orderbook struct {
+	ID int64
+
 	asks []*Limit
 	bids []*Limit
 
@@ -33,6 +36,7 @@ type Orderbook struct {
 
 func NewOrderBook() *Orderbook {
 	return &Orderbook{
+		ID:        int64(rand.Intn(1000000000)),
 		asks:      []*Limit{},
 		bids:      []*Limit{},
 		AskLimits: make(map[float64]*Limit),
