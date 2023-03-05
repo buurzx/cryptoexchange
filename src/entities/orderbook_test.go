@@ -1,7 +1,6 @@
-package orderbook
+package entities
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -27,9 +26,6 @@ func TestLimit(t *testing.T) {
 	l.DeleteOrder(buyOrder2)
 
 	require.Equal(t, 17.0, l.TotalVolume)
-
-	// fmt.Println(l.TotalVolume)
-	// fmt.Printf("Limit %#v \n", l)
 }
 
 func TestPlaceLimitOrder(t *testing.T) {
@@ -72,8 +68,6 @@ func TestPlaceMarketOrder(t *testing.T) {
 	assert(t, matches[0].SizeFilled, 10.0)
 	assert(t, matches[0].Price, 10_000.0)
 	assert(t, buyOrder.IsFilled(), true)
-
-	fmt.Printf("%+v", matches)
 }
 
 func TestPlaceMarketOrderMultiFillAsk(t *testing.T) {
@@ -97,9 +91,6 @@ func TestPlaceMarketOrderMultiFillAsk(t *testing.T) {
 	assert(t, ob.BidTotalVolume(), 4.0)
 	assert(t, len(matches), 4)
 	assert(t, len(ob.bids), 2)
-
-	fmt.Printf("%+v", matches)
-
 }
 
 func TestPlaceMarketOrderMultiFillBid(t *testing.T) {
@@ -121,9 +112,6 @@ func TestPlaceMarketOrderMultiFillBid(t *testing.T) {
 	assert(t, ob.AskTotalVolume(), 3.0)
 	assert(t, len(ob.asks), 1)
 	assert(t, len(matches), 3)
-
-	fmt.Printf("%+v", matches)
-
 }
 
 func TestCancelOrder(t *testing.T) {

@@ -2,7 +2,7 @@ build:
 	go build -o bin/exchange
 
 run: build	
-	./bin/exchange
+	./bin/exchange http-server --http-shutdown-delay=2s
 
 test:
 	go test -v ./...
