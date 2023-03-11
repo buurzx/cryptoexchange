@@ -64,7 +64,7 @@ func (s *API) Setup(a *app.Application) error {
 	// handlers
 	healthcheckHandler := NewHealthcheck()
 	placeOrderHandler := NewPlaceOrderHandler(repos.Orderbook)
-	getOrderHandler := NewGetOrderHandler(repos.Orderbook)
+	getOrderHandler := NewGetOrderBookHandler(repos.Orderbook)
 	cancelOrderHandler := NewCancelOrderHandler(repos.Orderbook, repos.Order, s.logger)
 
 	// routes

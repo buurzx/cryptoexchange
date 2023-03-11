@@ -16,15 +16,15 @@ type OrderbookData struct {
 	OrderbookID    int64
 }
 
-type getOrder struct {
+type getOrderBook struct {
 	orderbookRepo OrderbooksRepoIface
 }
 
-func NewGetOrderHandler(oredebookRepo OrderbooksRepoIface) *getOrder {
-	return &getOrder{orderbookRepo: oredebookRepo}
+func NewGetOrderBookHandler(oredebookRepo OrderbooksRepoIface) *getOrderBook {
+	return &getOrderBook{orderbookRepo: oredebookRepo}
 }
 
-func (p *getOrder) Handle(c echo.Context) error {
+func (p *getOrderBook) Handle(c echo.Context) error {
 	market := entities.Market(c.Param("market"))
 
 	ob, err := p.orderbookRepo.FindByMarket(string(market))
@@ -48,7 +48,7 @@ func (p *getOrder) Handle(c echo.Context) error {
 				Size:        order.Size,
 				Kind:        order.Kind,
 				Timestampt:  order.Timestampt,
-				OrderbookID: order.ID,
+				OrderbookID: order.OrderbookID,
 			}
 
 			orderbookData.Asks = append(orderbookData.Asks, &o)
@@ -63,7 +63,7 @@ func (p *getOrder) Handle(c echo.Context) error {
 				Size:        order.Size,
 				Kind:        order.Kind,
 				Timestampt:  order.Timestampt,
-				OrderbookID: order.ID,
+				OrderbookID: order.OrderbookID,
 			}
 
 			orderbookData.Bids = append(orderbookData.Bids, &o)
